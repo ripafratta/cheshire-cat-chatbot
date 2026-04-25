@@ -3,7 +3,8 @@
     "description": "Cheshire cat integration",
     "type": "library",
     "require": {
-        "webgrafia/cheshire-cat-sdk-laravel": "*"
+        "webgrafia/cheshire-cat-sdk-laravel": "*",
+        "league/html-to-markdown": "^5.1"
     },
     "autoload": {
         "psr-4": {

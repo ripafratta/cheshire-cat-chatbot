@@ -180,11 +180,33 @@ function cheshirecat_upload_to_declarative_memory( $post_id, $post, $cheshire_ca
         // Get the post content
         $content = $post->post_content;
 
-        // Strip shortcodes
-        $content = strip_shortcodes($content);
+        // Expand shortcodes if they contain useful text
+        $content = do_shortcode($content);
 
-        // Strip HTML tags
-        $content = wp_strip_all_tags($content);
+        // Add paragraph tags to help Markdown converter (crucial for Classic Editor content)
+        $content = wpautop($content);
+
+        // Check if HtmlConverter class exists
+        if ( class_exists( '\League\HTMLToMarkdown\HtmlConverter' ) ) {
+            $config = [
+                'header_style'      => 'atx',
+                'strip_tags'        => true,
+                'remove_nodes'      => 'script style iframe form',
+                'italic_style'      => '*',
+                'bold_style'        => '**',
+                'hard_break'        => true,
+                'preserve_comments' => false,
+            ];
+            $converter = new \League\HTMLToMarkdown\HtmlConverter($config);
+            
+            // Conversion and extra clean-up
+            $markdown_content = $converter->convert($content);
+            $content = preg_replace("/\n\s+\n/", "\n\n", $markdown_content);
+        } else {
+            // Fallback in case Composer was not run correctly
+            $content = strip_shortcodes($content);
+            $content = wp_strip_all_tags($content);
+        }
 
         // Get the post URL
         $post_url = get_permalink($post_id);
@@ -204,7 +226,12 @@ function cheshirecat_upload_to_declarative_memory( $post_id, $post, $cheshire_ca
                 // Add short description if available
                 $short_description = $product->get_short_description();
                 if (!empty($short_description)) {
-                    $short_description = wp_strip_all_tags($short_description);
+                    if ( isset($converter) ) {
+                        $short_description_md = $converter->convert( wpautop(do_shortcode($short_description)) );
+                        $short_description = preg_replace("/\n\s+\n/", "\n\n", $short_description_md);
+                    } else {
+                        $short_description = wp_strip_all_tags($short_description);
+                    }
                     $content = "Short Description: " . $short_description . "\n\nFull Description: " . $content;
                     $metadata['short_description'] = $short_description;
                 }
